@@ -3,18 +3,24 @@ import type { NextRequest } from "next/server";
 
 const ALLOWED_IPS = ["62.45.64.134"];
 
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
-  return "";
+function getClientIp(request: NextRequest): string | null {
+  const headers = [
+    "x-forwarded-for",
+    "x-real-ip",
+    "cf-connecting-ip",
+    "true-client-ip",
+  ];
+  for (const header of headers) {
+    const value = request.headers.get(header);
+    if (value) return value.split(",")[0].trim();
+  }
+  return null; // IP cannot be determined
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public paths — no auth required
+  // Public paths — no auth required, no IP check
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
@@ -26,12 +32,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // IP whitelist check
+  // IP whitelist: only block if we can determine the IP AND it's not allowed
   const clientIp = getClientIp(request);
-  if (!ALLOWED_IPS.includes(clientIp)) {
+  if (clientIp !== null && !ALLOWED_IPS.includes(clientIp)) {
     return new NextResponse("Toegang geweigerd.", { status: 403 });
   }
 
+  // Session check
   const session = request.cookies.get("portal_session");
   const secret = process.env.PORTAL_SESSION_SECRET;
 
