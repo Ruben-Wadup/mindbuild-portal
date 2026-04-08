@@ -8,7 +8,12 @@ async function getAccessToken(scopes: string[]): Promise<string> {
     throw new Error("GOOGLE_PRIVATE_KEY or GOOGLE_CLIENT_EMAIL not set");
   }
 
-  const privateKey = rawKey.replace(/\\n/g, "\n");
+  // Normalize key: handle literal \n from env vars, CRLF, and stray whitespace
+  const privateKey = rawKey
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
   const key = await importPKCS8(privateKey, "RS256");
   const now = Math.floor(Date.now() / 1000);
 
