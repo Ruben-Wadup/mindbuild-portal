@@ -14,25 +14,25 @@ function getClientIp(request: NextRequest): string | null {
     const value = request.headers.get(header);
     if (value) return value.split(",")[0].trim();
   }
-  return null; // IP cannot be determined
+  return null;
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public paths — no auth required, no IP check
+  // Skip all Next.js internals and public paths
   if (
+    pathname.startsWith("/_next/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhook") ||
     pathname.startsWith("/api/migrate") ||
-    pathname.startsWith("/_next") ||
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next();
   }
 
-  // IP whitelist: only block if we can determine the IP AND it's not allowed
+  // IP whitelist: only block if IP is known AND not allowed
   const clientIp = getClientIp(request);
   if (clientIp !== null && !ALLOWED_IPS.includes(clientIp)) {
     return new NextResponse("Toegang geweigerd.", { status: 403 });
