@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LayoutDashboard, Users, BarChart2, LogOut } from "lucide-react";
 
 const navItems = [
@@ -23,28 +22,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
+            <a
               key={href}
               href={href}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
               {label}
-            </Link>
+            </a>
           ))}
         </nav>
 
         {/* Logout */}
         <div className="px-3 py-4 border-t border-white/5">
-          <form action="/api/auth" method="DELETE">
-            <Link
-              href="/api/auth/logout"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Uitloggen
-            </Link>
-          </form>
+          <a
+            href="/api/auth/logout"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Uitloggen
+          </a>
         </div>
       </aside>
 
