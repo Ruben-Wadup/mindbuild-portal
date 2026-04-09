@@ -1,4 +1,5 @@
-import { SignJWT, importPKCS8 } from "jose";
+import { SignJWT } from "jose";
+import { createPrivateKey } from "crypto";
 
 async function getAccessToken(scopes: string[]): Promise<string> {
   const rawKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -14,7 +15,7 @@ async function getAccessToken(scopes: string[]): Promise<string> {
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .trim();
-  const key = await importPKCS8(privateKey, "RS256");
+  const key = createPrivateKey(privateKey);
   const now = Math.floor(Date.now() / 1000);
 
   const jwt = await new SignJWT({ scope: scopes.join(" ") })
