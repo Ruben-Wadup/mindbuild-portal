@@ -1,0 +1,34 @@
+<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark teal background (rounded square) -->
+  <rect width="32" height="32" rx="7" fill="#0f2027"/>
+
+  <!-- Subtle glow -->
+  <circle cx="16" cy="16" r="10" fill="rgba(0,212,170,0.08)"/>
+
+  <!-- Hex ring connections (outer nodes to each other) -->
+  <line x1="16" y1="4.8" x2="25.7" y2="10.4" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+  <line x1="25.7" y1="10.4" x2="25.7" y2="21.6" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+  <line x1="25.7" y1="21.6" x2="16" y2="27.2" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+  <line x1="16" y1="27.2" x2="6.3" y2="21.6" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+  <line x1="6.3" y1="21.6" x2="6.3" y2="10.4" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+  <line x1="6.3" y1="10.4" x2="16" y2="4.8" stroke="#00D4AA" stroke-width="0.8" stroke-opacity="0.25"/>
+
+  <!-- Spokes from center to outer nodes -->
+  <line x1="16" y1="16" x2="16" y2="4.8" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="16" y1="16" x2="25.7" y2="10.4" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="16" y1="16" x2="25.7" y2="21.6" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="16" y1="16" x2="16" y2="27.2" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="16" y1="16" x2="6.3" y2="21.6" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+  <line x1="16" y1="16" x2="6.3" y2="10.4" stroke="#00D4AA" stroke-width="1.2" stroke-opacity="0.6"/>
+
+  <!-- Outer nodes -->
+  <circle cx="16" cy="4.8" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+  <circle cx="25.7" cy="10.4" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+  <circle cx="25.7" cy="21.6" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+  <circle cx="16" cy="27.2" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+  <circle cx="6.3" cy="21.6" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+  <circle cx="6.3" cy="10.4" r="2.2" fill="#00D4AA" fill-opacity="0.85"/>
+
+  <!-- Center node -->
+  <circle cx="16" cy="16" r="3.8" fill="#00D4AA"/>
+</svg>

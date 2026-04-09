@@ -18,6 +18,25 @@ export const metadata: Metadata = {
   title: "MindBuild Portal",
   description: "MindBuild dashboard — leads en analytics",
   robots: "noindex, nofollow",
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon-32.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MB Portal",
+  },
+  other: {
+    "theme-color": "#0f2027",
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -27,6 +46,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="nl" className={`${spaceGrotesk.variable} ${spaceMono.variable} h-full`}>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+      </head>
       <body className="min-h-full bg-[#0f2027] antialiased font-[family-name:var(--font-space-grotesk)]">{children}</body>
     </html>
   );
