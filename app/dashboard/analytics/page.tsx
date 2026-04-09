@@ -2,8 +2,9 @@ export const dynamic = 'force-dynamic';
 
 import { fetchGa4, fetchSearchConsole, type Ga4Summary, type GscQuery } from "@/lib/google";
 import { fetchPlausibleSummary, fetchPlausibleTimeseries, fetchPlausibleTopPages, type PlausibleSummary, type PlausibleDay, type PlausiblePage } from "@/lib/plausible";
+import { fetchGoogleAdsCampaigns, type GoogleAdsSummary } from "@/lib/google-ads";
 import sql from "@/lib/db";
-import { BarChart2, Search, BookOpen, AlertCircle, Globe } from "lucide-react";
+import { BarChart2, Search, BookOpen, AlertCircle, Globe, TrendingUp } from "lucide-react";
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -125,6 +126,66 @@ function PlausibleSection({
   );
 }
 
+function GoogleAdsSection({ data }: { data: GoogleAdsSummary }) {
+  const { campaigns, totals } = data;
+  const costPerConversion = totals.conversions > 0 ? totals.costEur / totals.conversions : null;
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-5">
+      <p className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+        <TrendingUp className="w-3.5 h-3.5 text-[#00D4AA]" />
+        Google Ads · Laatste 7 dagen
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Vertoningen" value={totals.impressions.toLocaleString("nl")} />
+        <StatCard label="Klikken" value={totals.clicks.toLocaleString("nl")} />
+        <StatCard label="Kosten" value={`€${totals.costEur.toFixed(2)}`} />
+        <StatCard
+          label="Conversies"
+          value={totals.conversions.toFixed(1)}
+          sub={costPerConversion ? `€${costPerConversion.toFixed(2)} per lead` : undefined}
+        />
+      </div>
+
+      {campaigns.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-white/30 text-xs border-b border-white/8">
+                <th className="text-left pb-2 pr-4 font-normal">Campagne</th>
+                <th className="text-right pb-2 px-3 font-normal">Status</th>
+                <th className="text-right pb-2 px-3 font-normal">Vertoningen</th>
+                <th className="text-right pb-2 px-3 font-normal">Klikken</th>
+                <th className="text-right pb-2 px-3 font-normal">CTR</th>
+                <th className="text-right pb-2 px-3 font-normal">Gem. CPC</th>
+                <th className="text-right pb-2 pl-3 font-normal">Kosten</th>
+              </tr>
+            </thead>
+            <tbody>
+              {campaigns.map((c) => (
+                <tr key={c.campaignName} className="border-b border-white/5 hover:bg-white/3">
+                  <td className="py-2.5 pr-4 text-white/70 text-xs truncate max-w-[200px]">{c.campaignName}</td>
+                  <td className="py-2.5 px-3 text-right">
+                    <span className={`text-xs font-mono ${c.status === "ENABLED" ? "text-[#00D4AA]" : "text-white/30"}`}>
+                      {c.status === "ENABLED" ? "actief" : c.status.toLowerCase()}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-3 text-right text-white/50 text-xs">{c.impressions.toLocaleString("nl")}</td>
+                  <td className="py-2.5 px-3 text-right text-[#00D4AA] font-semibold text-xs">{c.clicks.toLocaleString("nl")}</td>
+                  <td className="py-2.5 px-3 text-right text-white/50 text-xs">{c.ctr.toFixed(2)}%</td>
+                  <td className="py-2.5 px-3 text-right text-white/50 text-xs">€{c.avgCpcEur.toFixed(2)}</td>
+                  <td className="py-2.5 pl-3 text-right text-white/70 text-xs font-semibold">€{c.costEur.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- page -------------------------------------------------------------------
 
 export default async function AnalyticsPage() {
@@ -134,11 +195,18 @@ export default async function AnalyticsPage() {
     !!process.env.GA4_PROPERTY_ID;
 
   const hasPlausible = !!process.env.PLAUSIBLE_API_KEY;
+  const hasGoogleAds =
+    !!process.env.GOOGLE_ADS_DEVELOPER_TOKEN &&
+    !!process.env.GOOGLE_ADS_CLIENT_ID &&
+    !!process.env.GOOGLE_ADS_REFRESH_TOKEN &&
+    !!process.env.GOOGLE_ADS_CUSTOMER_ID;
 
   let ga4: Ga4Summary | null = null;
   let gsc: GscQuery[] | null = null;
   let ga4Error: string | null = null;
   let gscError: string | null = null;
+  let googleAds: GoogleAdsSummary | null = null;
+  let googleAdsError: string | null = null;
 
   // Plausible data per site
   type PlausibleSiteData = {
@@ -149,7 +217,7 @@ export default async function AnalyticsPage() {
   const plausibleData: Record<string, PlausibleSiteData> = {};
   let plausibleError: string | null = null;
 
-  const [ga4Result, gscResult, plNlResult, plAeResult] = await Promise.allSettled([
+  const [ga4Result, gscResult, plNlResult, plAeResult, adsResult] = await Promise.allSettled([
     hasGoogle ? fetchGa4(28) : Promise.resolve(null),
     hasGoogle ? fetchSearchConsole(28) : Promise.resolve(null),
     hasPlausible
@@ -166,7 +234,11 @@ export default async function AnalyticsPage() {
           fetchPlausibleTopPages("mindbuild.ae"),
         ])
       : Promise.resolve(null),
+    hasGoogleAds ? fetchGoogleAdsCampaigns(7) : Promise.resolve(null),
   ]);
+
+  if (adsResult.status === "fulfilled" && adsResult.value) googleAds = adsResult.value as GoogleAdsSummary;
+  else if (adsResult.status === "rejected") googleAdsError = (adsResult.reason as Error).message;
 
   if (ga4Result.status === "fulfilled" && ga4Result.value) ga4 = ga4Result.value as Ga4Summary;
   else if (ga4Result.status === "rejected") ga4Error = (ga4Result.reason as Error).message;
@@ -192,8 +264,15 @@ export default async function AnalyticsPage() {
     <div className="p-6 space-y-8 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        <p className="text-white/40 text-sm mt-1">Laatste 28-30 dagen · Plausible + Google Analytics 4</p>
+        <p className="text-white/40 text-sm mt-1">Laatste 28-30 dagen · Plausible + Google Analytics 4 + Google Ads</p>
       </div>
+
+      {/* Google Ads */}
+      {!hasGoogleAds && (
+        <ConfigNotice message="Google Ads koppeling niet actief. Voeg GOOGLE_ADS_DEVELOPER_TOKEN, GOOGLE_ADS_CLIENT_ID, GOOGLE_ADS_CLIENT_SECRET, GOOGLE_ADS_REFRESH_TOKEN, GOOGLE_ADS_CUSTOMER_ID en GOOGLE_ADS_LOGIN_CUSTOMER_ID toe als env vars op Coolify." />
+      )}
+      {googleAdsError && <ConfigNotice message={`Google Ads fout: ${googleAdsError}`} />}
+      {googleAds && <GoogleAdsSection data={googleAds} />}
 
       {/* Plausible */}
       {!hasPlausible && (
