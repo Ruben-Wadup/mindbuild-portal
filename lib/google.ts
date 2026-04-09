@@ -1,25 +1,48 @@
-import { SignJWT, importPKCS8 } from "jose";
+import { webcrypto } from "crypto";
 
-function buildCleanPem(raw: string): string {
-  // Strip all whitespace and escape sequences, isolate the base64 payload
-  const normalized = raw
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "")
-    .replace(/\r/g, "")
-    .replace(/[^\x20-\x7E\n]/g, ""); // remove non-printable chars
+/**
+ * Extracts raw DER bytes from a PKCS#8 PEM key.
+ * Handles both literal \n escape sequences (from env vars) and real newlines.
+ */
+function pemToDer(raw: string): Uint8Array {
+  const b64 = raw
+    .replace(/\\n/g, "\n")       // literal \n → newline
+    .replace(/\\r/g, "")         // literal \r → gone
+    .replace(/\r/g, "")          // CR → gone
+    .replace(/[^\x20-\x7E\n]/g, "") // strip non-printable
+    .replace(/-----[^-]+-----/g, "")  // strip PEM headers/footers
+    .replace(/\s+/g, "");        // strip all whitespace
 
-  const b64 = normalized
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s/g, ""); // strip all whitespace from base64 body
+  const binary = atob(b64);
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+}
 
-  if (!b64) throw new Error("Lege private key na normalisatie");
+/**
+ * Signs a Google service account JWT using WebCrypto (crypto.subtle).
+ * Bypasses Node.js OpenSSL PEM decoder entirely — works on Node 18+.
+ */
+async function signJwt(claims: Record<string, unknown>, rawKey: string): Promise<string> {
+  const der = pemToDer(rawKey);
 
-  // Reconstruct with exactly 64-char lines (PKCS#8 PEM spec)
-  const lines: string[] = [];
-  for (let i = 0; i < b64.length; i += 64) lines.push(b64.slice(i, i + 64));
+  const key = await webcrypto.subtle.importKey(
+    "pkcs8",
+    der,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
 
-  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  const signingInput = `${header}.${payload}`;
+
+  const sig = await webcrypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    Buffer.from(signingInput)
+  );
+
+  return `${signingInput}.${Buffer.from(sig).toString("base64url")}`;
 }
 
 async function getAccessToken(scopes: string[]): Promise<string> {
@@ -30,18 +53,18 @@ async function getAccessToken(scopes: string[]): Promise<string> {
     throw new Error("GOOGLE_PRIVATE_KEY or GOOGLE_CLIENT_EMAIL not set");
   }
 
-  const pem = buildCleanPem(rawKey);
-  const key = await importPKCS8(pem, "RS256");
   const now = Math.floor(Date.now() / 1000);
-
-  const jwt = await new SignJWT({ scope: scopes.join(" ") })
-    .setProtectedHeader({ alg: "RS256" })
-    .setIssuer(clientEmail)
-    .setSubject(clientEmail)
-    .setAudience("https://oauth2.googleapis.com/token")
-    .setIssuedAt(now)
-    .setExpirationTime(now + 3600)
-    .sign(key);
+  const jwt = await signJwt(
+    {
+      iss: clientEmail,
+      sub: clientEmail,
+      aud: "https://oauth2.googleapis.com/token",
+      scope: scopes.join(" "),
+      iat: now,
+      exp: now + 3600,
+    },
+    rawKey
+  );
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -52,13 +75,15 @@ async function getAccessToken(scopes: string[]): Promise<string> {
     }),
   });
 
-  const data = (await res.json()) as { access_token?: string; error?: string };
-  if (!data.access_token) throw new Error(`Google auth failed: ${data.error}`);
+  const data = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
+  if (!data.access_token) {
+    throw new Error(`Google auth failed: ${data.error} — ${data.error_description ?? ""}`);
+  }
   return data.access_token;
 }
 
 export type Ga4Row = {
-  date: string;        // "YYYYMMDD"
+  date: string;
   sessions: number;
   users: number;
   pageviews: number;
@@ -156,7 +181,6 @@ export async function fetchSearchConsole(days = 28): Promise<GscQuery[]> {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - days);
-
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
   const body = {
