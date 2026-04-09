@@ -4,6 +4,8 @@ import sql from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle2, Circle, Clock } from "lucide-react";
+import { LeadNotes } from "./lead-notes";
+import { DeleteLeadButton } from "./delete-lead-button";
 
 const statusLabels: Record<string, string> = {
   new: "Nieuw",
@@ -64,9 +66,12 @@ export default async function LeadDetailPage({
           <h1 className="text-xl font-bold text-white">{lead.email}</h1>
           {lead.naam && <p className="text-white/50 text-sm mt-0.5">{lead.naam}{lead.bedrijf ? ` · ${lead.bedrijf}` : ""}</p>}
         </div>
-        <Badge className={`text-xs border flex-shrink-0 ${statusColors[lead.status] ?? "bg-white/10 text-white/40"}`}>
-          {statusLabels[lead.status] ?? lead.status}
-        </Badge>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Badge className={`text-xs border ${statusColors[lead.status] ?? "bg-white/10 text-white/40"}`}>
+            {statusLabels[lead.status] ?? lead.status}
+          </Badge>
+          <DeleteLeadButton leadId={lead.id} />
+        </div>
       </div>
 
       {/* Lead info */}
@@ -119,6 +124,9 @@ export default async function LeadDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Notes */}
+      <LeadNotes leadId={lead.id} initialNotes={lead.notes ?? null} />
 
       {/* n8n timeline (only for geo_scan leads) */}
       {lead.source === "geo_scan" && (

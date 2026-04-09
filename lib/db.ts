@@ -18,12 +18,15 @@ export async function runMigrations() {
       score       INTEGER,
       bericht     TEXT,
       onderwerp   TEXT,
+      notes       TEXT,
       source      TEXT NOT NULL DEFAULT 'geo_scan',
       status      TEXT NOT NULL DEFAULT 'new',
       created_at  TIMESTAMPTZ DEFAULT NOW(),
       updated_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS blog_stats (
