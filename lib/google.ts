@@ -2,19 +2,24 @@ import { webcrypto } from "crypto";
 
 /**
  * Extracts raw DER bytes from a PKCS#8 PEM key.
- * Handles both literal \n escape sequences (from env vars) and real newlines.
+ * Handles literal \n escape sequences from Coolify env vars.
+ * Uses Buffer.from + explicit base64 filter — no atob, no OpenSSL.
  */
 function pemToDer(raw: string): Uint8Array {
-  const b64 = raw
-    .replace(/\\n/g, "\n")       // literal \n → newline
-    .replace(/\\r/g, "")         // literal \r → gone
-    .replace(/\r/g, "")          // CR → gone
-    .replace(/[^\x20-\x7E\n]/g, "") // strip non-printable
-    .replace(/-----[^-]+-----/g, "")  // strip PEM headers/footers
-    .replace(/\s+/g, "");        // strip all whitespace
+  // Normalize all newline representations first
+  const normalized = raw
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .replace(/\r/g, "");
 
-  const binary = atob(b64);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  // Strip PEM headers/footers, then keep ONLY valid base64 characters
+  const b64 = normalized
+    .replace(/-----[^-]+-----/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, ""); // explicit base64-safe whitelist
+
+  if (b64.length === 0) throw new Error("Private key base64 is leeg na normalisatie");
+
+  return new Uint8Array(Buffer.from(b64, "base64"));
 }
 
 /**
