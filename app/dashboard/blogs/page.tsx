@@ -1,6 +1,6 @@
 import sql from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, TrendingUp, BookOpen, Calendar } from "lucide-react";
+import { Eye, TrendingUp, BookOpen, Calendar, Bot, Globe } from "lucide-react";
 
 async function getBlogStats() {
   try {
@@ -19,8 +19,24 @@ async function getBlogStats() {
   }
 }
 
+async function getAutoPosts() {
+  try {
+    return await sql`
+      SELECT id, slug, title, site, cover_image, category, primary_keyword, url, published_at
+      FROM auto_published_posts
+      ORDER BY published_at DESC
+      LIMIT 50
+    `;
+  } catch {
+    return [];
+  }
+}
+
 export default async function BlogsPage() {
-  const { posts, totalViews, totalPosts } = await getBlogStats();
+  const [{ posts, totalViews, totalPosts }, autoPosts] = await Promise.all([
+    getBlogStats(),
+    getAutoPosts(),
+  ]);
   const topPost = posts[0] ?? null;
 
   return (
@@ -144,6 +160,84 @@ export default async function BlogsPage() {
                       </td>
                       <td className="px-4 py-3 text-white/40 text-xs">
                         {new Date(post.last_viewed).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Auto-published posts */}
+      <Card className="bg-white/5 border-white/10">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+            <Bot className="w-4 h-4 text-[#00D4AA]" />
+            Automatisch gepubliceerd
+          </CardTitle>
+          <span className="text-xs text-white/30">{autoPosts.length} posts</span>
+        </CardHeader>
+        <CardContent className="p-0">
+          {autoPosts.length === 0 ? (
+            <p className="text-white/40 text-sm p-6 text-center">
+              Nog geen automatisch gepubliceerde posts. De n8n workflow publiceert elke 4 dagen een nieuw artikel.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="text-left text-xs text-white/40 font-medium px-6 py-3">Artikel</th>
+                    <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Site</th>
+                    <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Keyword</th>
+                    <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Gepubliceerd</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {autoPosts.map((post) => (
+                    <tr key={String(post.id)} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {post.cover_image && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={String(post.cover_image)}
+                              alt=""
+                              className="w-12 h-8 object-cover rounded flex-shrink-0"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            {post.url ? (
+                              <a
+                                href={String(post.url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-white font-medium hover:text-[#00D4AA] transition-colors truncate block max-w-[300px]"
+                              >
+                                {String(post.title)}
+                              </a>
+                            ) : (
+                              <span className="text-white font-medium truncate block max-w-[300px]">{String(post.title)}</span>
+                            )}
+                            <p className="text-xs text-white/30 font-mono">/blog/{String(post.slug)}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/60 font-medium flex items-center gap-1 w-fit">
+                          <Globe className="w-3 h-3" />
+                          .{String(post.site)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-white/40 text-xs max-w-[160px] truncate">
+                        {post.primary_keyword ? String(post.primary_keyword) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-white/40 text-xs">
+                        {new Date(String(post.published_at)).toLocaleDateString("nl-NL", {
+                          day: "numeric", month: "short", year: "numeric",
+                        })}
                       </td>
                     </tr>
                   ))}

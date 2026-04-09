@@ -43,6 +43,20 @@ export async function runMigrations() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS auto_published_posts (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          TEXT NOT NULL,
+      title         TEXT NOT NULL,
+      site          TEXT NOT NULL CHECK (site IN ('nl', 'ae')),
+      cover_image   TEXT,
+      category      TEXT,
+      primary_keyword TEXT,
+      url           TEXT,
+      published_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS content_items (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       title         TEXT NOT NULL,
