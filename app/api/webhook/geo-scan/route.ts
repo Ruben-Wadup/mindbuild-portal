@@ -8,15 +8,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, url, score } = await req.json();
+    const { email, url, score, enrichment, source } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "email is verplicht" }, { status: 400 });
     }
 
     const [lead] = await sql`
-      INSERT INTO leads (email, url, score, source, status)
-      VALUES (${email}, ${url ?? null}, ${score ?? null}, 'geo_scan', 'new')
+      INSERT INTO leads (email, url, score, source, status, enrichment)
+      VALUES (
+        ${email},
+        ${url ?? null},
+        ${score ?? null},
+        ${source ?? 'geo_scan'},
+        'new',
+        ${enrichment ? JSON.stringify(enrichment) : null}
+      )
       RETURNING id
     `;
 

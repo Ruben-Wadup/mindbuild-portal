@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, CheckCircle2, Circle, Clock } from "lucide-react";
 import { LeadNotes } from "./lead-notes";
 import { DeleteLeadButton } from "./delete-lead-button";
+import { LeadStageEditor } from "./lead-stage-editor";
+import { LeadEnrichment } from "./lead-enrichment";
 
 const statusLabels: Record<string, string> = {
   new: "Nieuw",
@@ -124,6 +126,16 @@ export default async function LeadDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Enrichment + Stage side-by-side on wider screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <LeadEnrichment enrichment={lead.enrichment ?? null} />
+        <LeadStageEditor
+          leadId={lead.id}
+          initialStage={lead.stage ?? "prospect"}
+          initialDealValue={lead.deal_value ?? null}
+        />
+      </div>
 
       {/* Notes */}
       <LeadNotes leadId={lead.id} initialNotes={lead.notes ?? null} />

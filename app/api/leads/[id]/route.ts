@@ -29,19 +29,22 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const { status, notes } = await req.json();
+  const body = await req.json();
+  const { status, notes, stage, deal_value } = body;
 
   const [lead] = await sql`
     UPDATE leads
     SET
-      status = COALESCE(${status ?? null}, status),
-      notes = COALESCE(${notes !== undefined ? notes : null}, notes),
-      updated_at = NOW()
+      status      = COALESCE(${status ?? null}, status),
+      notes       = COALESCE(${notes !== undefined ? notes : null}, notes),
+      stage       = COALESCE(${stage ?? null}, stage),
+      deal_value  = COALESCE(${deal_value !== undefined ? deal_value : null}, deal_value),
+      updated_at  = NOW()
     WHERE id = ${id}
     RETURNING *
   `;
 
-  return NextResponse.json(lead);
+  return NextResponse.json(lead ?? { error: "Niet gevonden" });
 }
 
 export async function DELETE(
@@ -53,7 +56,11 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  await sql`DELETE FROM leads WHERE id = ${id}`;
+  const result = await sql`DELETE FROM leads WHERE id = ${id} RETURNING id`;
+
+  if (result.length === 0) {
+    return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -27,6 +27,9 @@ export async function runMigrations() {
   `;
 
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'prospect'`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deal_value NUMERIC(10,2)`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS enrichment JSONB`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS blog_stats (
