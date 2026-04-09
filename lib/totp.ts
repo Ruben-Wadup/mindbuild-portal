@@ -1,10 +1,8 @@
-import { TOTP } from "otplib";
-
-const totp = new TOTP();
+import { verify as totpVerify } from "otplib";
 
 export async function verifyTotp(token: string, secret: string): Promise<boolean> {
   try {
-    const result = await totp.verify(token, { secret });
+    const result = await totpVerify({ token, secret, epochTolerance: 30 });
     return result.valid === true;
   } catch {
     return false;
