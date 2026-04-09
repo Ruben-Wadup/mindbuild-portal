@@ -1,5 +1,26 @@
-import { SignJWT } from "jose";
-import { createPrivateKey } from "crypto";
+import { SignJWT, importPKCS8 } from "jose";
+
+function buildCleanPem(raw: string): string {
+  // Strip all whitespace and escape sequences, isolate the base64 payload
+  const normalized = raw
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .replace(/\r/g, "")
+    .replace(/[^\x20-\x7E\n]/g, ""); // remove non-printable chars
+
+  const b64 = normalized
+    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+    .replace(/-----END PRIVATE KEY-----/g, "")
+    .replace(/\s/g, ""); // strip all whitespace from base64 body
+
+  if (!b64) throw new Error("Lege private key na normalisatie");
+
+  // Reconstruct with exactly 64-char lines (PKCS#8 PEM spec)
+  const lines: string[] = [];
+  for (let i = 0; i < b64.length; i += 64) lines.push(b64.slice(i, i + 64));
+
+  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+}
 
 async function getAccessToken(scopes: string[]): Promise<string> {
   const rawKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -9,13 +30,8 @@ async function getAccessToken(scopes: string[]): Promise<string> {
     throw new Error("GOOGLE_PRIVATE_KEY or GOOGLE_CLIENT_EMAIL not set");
   }
 
-  // Normalize key: handle literal \n from env vars, CRLF, and stray whitespace
-  const privateKey = rawKey
-    .replace(/\\n/g, "\n")
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .trim();
-  const key = createPrivateKey(privateKey);
+  const pem = buildCleanPem(rawKey);
+  const key = await importPKCS8(pem, "RS256");
   const now = Math.floor(Date.now() / 1000);
 
   const jwt = await new SignJWT({ scope: scopes.join(" ") })
