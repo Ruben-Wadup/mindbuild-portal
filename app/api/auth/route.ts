@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         // Wachtwoord ok, maar nog geen TOTP — vraag om code
         return NextResponse.json({ requireTotp: true }, { status: 200 });
       }
-      if (!verifyTotp(totpToken, totpSecret)) {
+      if (!(await verifyTotp(totpToken, totpSecret))) {
         return NextResponse.json({ error: "Ongeldige authenticatiecode." }, { status: 401 });
       }
     }
