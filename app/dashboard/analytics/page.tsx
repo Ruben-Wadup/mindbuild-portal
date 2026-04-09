@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { fetchGa4, fetchSearchConsole, type Ga4Summary, type GscQuery } from "@/lib/google";
 import sql from "@/lib/db";
 import { BarChart2, Search, BookOpen, AlertCircle } from "lucide-react";

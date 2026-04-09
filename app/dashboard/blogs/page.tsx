@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import sql from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, TrendingUp, BookOpen, Calendar, Bot, Globe } from "lucide-react";
