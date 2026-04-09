@@ -4,8 +4,8 @@ const totp = new TOTP();
 
 export async function verifyTotp(token: string, secret: string): Promise<boolean> {
   try {
-    const result = await totp.verify({ token, secret });
-    return result === true;
+    const result = await totp.verify(token, { secret });
+    return result.valid === true;
   } catch {
     return false;
   }
