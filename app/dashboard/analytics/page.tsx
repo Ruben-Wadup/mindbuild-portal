@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic';
 
 import { fetchGa4, fetchSearchConsole, type Ga4Summary, type GscQuery } from "@/lib/google";
+import { fetchPlausibleSummary, fetchPlausibleTimeseries, fetchPlausibleTopPages, type PlausibleSummary, type PlausibleDay, type PlausiblePage } from "@/lib/plausible";
 import sql from "@/lib/db";
-import { BarChart2, Search, BookOpen, AlertCircle } from "lucide-react";
+import { BarChart2, Search, BookOpen, AlertCircle, Globe } from "lucide-react";
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -56,6 +57,74 @@ function ConfigNotice({ message }: { message: string }) {
   );
 }
 
+function PlausibleBarChart({ rows }: { rows: PlausibleDay[] }) {
+  if (!rows.length) return null;
+  const max = Math.max(...rows.map((r) => r.visitors), 1);
+  const W = 560;
+  const H = 100;
+  const barW = Math.max(Math.floor((W - 32) / rows.length) - 2, 2);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" aria-label="Bezoekers per dag">
+      {rows.map((r, i) => {
+        const barH = Math.max(Math.round((r.visitors / max) * (H - 16)), 2);
+        const x = 16 + i * ((W - 32) / rows.length);
+        const y = H - 4 - barH;
+        return (
+          <g key={r.date}>
+            <rect x={x} y={y} width={barW} height={barH} rx="2" fill="rgba(0,212,170,0.45)" />
+            <title>{`${r.date}: ${r.visitors} bezoekers`}</title>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function PlausibleSection({
+  site,
+  summary,
+  timeseries,
+  pages,
+}: {
+  site: string;
+  summary: PlausibleSummary;
+  timeseries: PlausibleDay[];
+  pages: PlausiblePage[];
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-mono text-[#00D4AA] tracking-widest uppercase">{site}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Bezoekers" value={summary.visitors.toLocaleString("nl")} sub="30 dagen" />
+        <StatCard label="Paginaweergaven" value={summary.pageviews.toLocaleString("nl")} />
+        <StatCard label="Bouncepercentage" value={`${summary.bounceRate}%`} />
+        <StatCard
+          label="Gem. bezoekduur"
+          value={`${Math.floor(summary.visitDuration / 60)}m ${summary.visitDuration % 60}s`}
+        />
+      </div>
+      {timeseries.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <PlausibleBarChart rows={timeseries} />
+        </div>
+      )}
+      {pages.length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs text-white/30 mb-3">Top pagina&apos;s</p>
+          <div className="space-y-1.5">
+            {pages.slice(0, 8).map((p) => (
+              <div key={p.page} className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-white/60 font-mono truncate max-w-[240px]">{p.page}</span>
+                <span className="text-[#00D4AA] font-semibold flex-shrink-0">{p.visitors.toLocaleString("nl")}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- page -------------------------------------------------------------------
 
 export default async function AnalyticsPage() {
@@ -64,20 +133,55 @@ export default async function AnalyticsPage() {
     !!process.env.GOOGLE_PRIVATE_KEY &&
     !!process.env.GA4_PROPERTY_ID;
 
+  const hasPlausible = !!process.env.PLAUSIBLE_API_KEY;
+
   let ga4: Ga4Summary | null = null;
   let gsc: GscQuery[] | null = null;
   let ga4Error: string | null = null;
   let gscError: string | null = null;
 
-  if (hasGoogle) {
-    const [ga4Result, gscResult] = await Promise.allSettled([
-      fetchGa4(28),
-      fetchSearchConsole(28),
-    ]);
-    if (ga4Result.status === "fulfilled") ga4 = ga4Result.value;
-    else ga4Error = (ga4Result.reason as Error).message;
-    if (gscResult.status === "fulfilled") gsc = gscResult.value;
-    else gscError = (gscResult.reason as Error).message;
+  // Plausible data per site
+  type PlausibleSiteData = {
+    summary: PlausibleSummary;
+    timeseries: PlausibleDay[];
+    pages: PlausiblePage[];
+  };
+  const plausibleData: Record<string, PlausibleSiteData> = {};
+  let plausibleError: string | null = null;
+
+  const [ga4Result, gscResult, plNlResult, plAeResult] = await Promise.allSettled([
+    hasGoogle ? fetchGa4(28) : Promise.resolve(null),
+    hasGoogle ? fetchSearchConsole(28) : Promise.resolve(null),
+    hasPlausible
+      ? Promise.all([
+          fetchPlausibleSummary("mindbuild.nl"),
+          fetchPlausibleTimeseries("mindbuild.nl"),
+          fetchPlausibleTopPages("mindbuild.nl"),
+        ])
+      : Promise.resolve(null),
+    hasPlausible
+      ? Promise.all([
+          fetchPlausibleSummary("mindbuild.ae"),
+          fetchPlausibleTimeseries("mindbuild.ae"),
+          fetchPlausibleTopPages("mindbuild.ae"),
+        ])
+      : Promise.resolve(null),
+  ]);
+
+  if (ga4Result.status === "fulfilled" && ga4Result.value) ga4 = ga4Result.value as Ga4Summary;
+  else if (ga4Result.status === "rejected") ga4Error = (ga4Result.reason as Error).message;
+  if (gscResult.status === "fulfilled" && gscResult.value) gsc = gscResult.value as GscQuery[];
+  else if (gscResult.status === "rejected") gscError = (gscResult.reason as Error).message;
+
+  if (plNlResult.status === "fulfilled" && plNlResult.value) {
+    const [summary, timeseries, pages] = plNlResult.value as [PlausibleSummary, PlausibleDay[], PlausiblePage[]];
+    plausibleData["mindbuild.nl"] = { summary, timeseries, pages };
+  } else if (plNlResult.status === "rejected") {
+    plausibleError = (plNlResult.reason as Error).message;
+  }
+  if (plAeResult.status === "fulfilled" && plAeResult.value) {
+    const [summary, timeseries, pages] = plAeResult.value as [PlausibleSummary, PlausibleDay[], PlausiblePage[]];
+    plausibleData["mindbuild.ae"] = { summary, timeseries, pages };
   }
 
   const blogRows = await sql<{ slug: string; title: string; views: number; last_viewed: string }[]>`
@@ -88,10 +192,33 @@ export default async function AnalyticsPage() {
     <div className="p-6 space-y-8 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-white">Analytics</h1>
-        <p className="text-white/40 text-sm mt-1">Laatste 28 dagen · Google Analytics 4 + Search Console</p>
+        <p className="text-white/40 text-sm mt-1">Laatste 28-30 dagen · Plausible + Google Analytics 4</p>
       </div>
 
-      {/* Setup notice */}
+      {/* Plausible */}
+      {!hasPlausible && (
+        <ConfigNotice message="Plausible niet actief. Voeg PLAUSIBLE_API_KEY toe als env var op Coolify. Maak een API key aan op plausible.io → Account Settings → API Keys." />
+      )}
+      {plausibleError && <ConfigNotice message={`Plausible fout: ${plausibleError}`} />}
+      {hasPlausible && Object.keys(plausibleData).length > 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5 space-y-8">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-widest flex items-center gap-2">
+            <Globe className="w-3.5 h-3.5 text-[#00D4AA]" />
+            Plausible · Cookieloze Analytics
+          </p>
+          {Object.entries(plausibleData).map(([site, data]) => (
+            <PlausibleSection
+              key={site}
+              site={site}
+              summary={data.summary}
+              timeseries={data.timeseries}
+              pages={data.pages}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Setup notice Google */}
       {!hasGoogle && (
         <ConfigNotice message="Google Analytics koppeling niet actief. Voeg GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GA4_PROPERTY_ID en SEARCH_CONSOLE_SITE_URL toe als env vars op Coolify." />
       )}
