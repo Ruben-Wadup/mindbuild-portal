@@ -62,7 +62,6 @@ async function getAccessToken(scopes: string[]): Promise<string> {
   const jwt = await signJwt(
     {
       iss: clientEmail,
-      sub: clientEmail,
       aud: "https://oauth2.googleapis.com/token",
       scope: scopes.join(" "),
       iat: now,
@@ -131,7 +130,7 @@ export async function fetchGa4(days = 28): Promise<Ga4Summary> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-      next: { revalidate: 3600 },
+      next: { revalidate: 300 },
     }
   );
 
@@ -206,7 +205,7 @@ export async function fetchSearchConsole(days = 28): Promise<GscQuery[]> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-      next: { revalidate: 3600 },
+      next: { revalidate: 300 },
     }
   );
 
