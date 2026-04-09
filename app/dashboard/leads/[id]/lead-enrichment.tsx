@@ -1,4 +1,4 @@
-import { Phone, Linkedin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Phone, Link, Link2, Camera, Globe, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Enrichment {
@@ -21,31 +21,31 @@ export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | null }
       href: `tel:${enrichment.phone}`,
     },
     enrichment.linkedin_company && {
-      icon: <Linkedin className="w-4 h-4" />,
+      icon: <Link className="w-4 h-4" />,
       label: "LinkedIn (bedrijf)",
       value: enrichment.linkedin_company.replace("https://", ""),
       href: enrichment.linkedin_company,
     },
     enrichment.linkedin_personal && {
-      icon: <Linkedin className="w-4 h-4" />,
+      icon: <Link2 className="w-4 h-4" />,
       label: "LinkedIn (persoon)",
       value: enrichment.linkedin_personal.replace("https://", ""),
       href: enrichment.linkedin_personal,
     },
     enrichment.instagram && {
-      icon: <Instagram className="w-4 h-4" />,
+      icon: <Camera className="w-4 h-4" />,
       label: "Instagram",
       value: enrichment.instagram.replace("https://instagram.com/", "@"),
       href: enrichment.instagram,
     },
     enrichment.facebook && {
-      icon: <Facebook className="w-4 h-4" />,
+      icon: <Globe className="w-4 h-4" />,
       label: "Facebook",
       value: enrichment.facebook.replace("https://facebook.com/", ""),
       href: enrichment.facebook,
     },
     enrichment.twitter && {
-      icon: <Twitter className="w-4 h-4" />,
+      icon: <MessageCircle className="w-4 h-4" />,
       label: "X / Twitter",
       value: enrichment.twitter.replace("https://x.com/", "@"),
       href: enrichment.twitter,
