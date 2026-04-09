@@ -1,12 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { runMigrations } from "@/lib/db";
 
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-migrate-secret");
-  if (secret !== process.env.PORTAL_SESSION_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+async function migrate() {
   try {
     await runMigrations();
     return NextResponse.json({ ok: true, message: "Migraties uitgevoerd." });
@@ -14,4 +9,12 @@ export async function POST(req: NextRequest) {
     console.error("[migrate]", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return migrate();
+}
+
+export async function POST() {
+  return migrate();
 }
