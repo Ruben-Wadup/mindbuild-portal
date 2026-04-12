@@ -1,8 +1,9 @@
-import { LayoutDashboard, Users, BarChart2, BookOpen, CalendarDays, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, BookOpen, CalendarDays, LogOut, MessageCircle } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard",           label: "Overzicht",  icon: LayoutDashboard },
   { href: "/dashboard/leads",     label: "Leads",      icon: Users },
+  { href: "/dashboard/chats",     label: "Chats",      icon: MessageCircle },
   { href: "/dashboard/blogs",     label: "Blog",       icon: BookOpen },
   { href: "/dashboard/content",   label: "Content",    icon: CalendarDays },
   { href: "/dashboard/analytics", label: "Analytics",  icon: BarChart2 },

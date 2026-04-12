@@ -68,4 +68,28 @@ export async function runMigrations() {
       updated_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id    TEXT UNIQUE NOT NULL,
+      site          TEXT NOT NULL DEFAULT 'mindbuild.nl',
+      first_message TEXT,
+      message_count INTEGER NOT NULL DEFAULT 0,
+      started_at    TIMESTAMPTZ DEFAULT NOW(),
+      last_message_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id TEXT NOT NULL REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+      role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+      content    TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  await sql`CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id)`;
 }
