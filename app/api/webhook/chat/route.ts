@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { sessionId, site, userMessage, assistantMessage, isFirst, firstMessage } = await req.json();
+    const { sessionId, site, userMessage, assistantMessage, isFirst, firstMessage, ip, email, pageUrl, referrer } = await req.json();
 
     if (!sessionId || !userMessage || !assistantMessage) {
       return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
@@ -17,18 +17,30 @@ export async function POST(req: NextRequest) {
     // Upsert session
     if (isFirst) {
       await sql`
-        INSERT INTO chat_sessions (session_id, site, first_message, message_count, last_message_at)
-        VALUES (${sessionId}, ${site ?? "mindbuild.nl"}, ${firstMessage ?? userMessage}, 2, NOW())
+        INSERT INTO chat_sessions (session_id, site, first_message, message_count, last_message_at, ip_address, page_url, referrer)
+        VALUES (${sessionId}, ${site ?? "mindbuild.nl"}, ${firstMessage ?? userMessage}, 2, NOW(), ${ip ?? null}, ${pageUrl ?? null}, ${referrer ?? null})
         ON CONFLICT (session_id) DO UPDATE SET
           message_count   = chat_sessions.message_count + 2,
-          last_message_at = NOW()
+          last_message_at = NOW(),
+          ip_address      = COALESCE(chat_sessions.ip_address, ${ip ?? null}),
+          page_url        = COALESCE(chat_sessions.page_url, ${pageUrl ?? null}),
+          referrer        = COALESCE(chat_sessions.referrer, ${referrer ?? null})
       `;
     } else {
       await sql`
         UPDATE chat_sessions
-        SET message_count = message_count + 2, last_message_at = NOW()
+        SET message_count = message_count + 2,
+            last_message_at = NOW(),
+            email = COALESCE(${email ?? null}, email)
         WHERE session_id = ${sessionId}
       `;
+    }
+
+    // If email detected later in conversation, update it
+    if (email && !isFirst) {
+      // Already handled above
+    } else if (email && isFirst) {
+      await sql`UPDATE chat_sessions SET email = ${email} WHERE session_id = ${sessionId}`;
     }
 
     // Insert both messages

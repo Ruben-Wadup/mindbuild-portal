@@ -11,6 +11,10 @@ type Session = {
   message_count: number;
   started_at: Date;
   last_message_at: Date;
+  ip_address: string | null;
+  email: string | null;
+  page_url: string | null;
+  referrer: string | null;
 };
 
 type ChatMessage = {
@@ -84,7 +88,14 @@ export default async function ChatsPage({
               <p className="text-sm text-white/80 line-clamp-2 leading-snug">
                 {s.first_message ?? "—"}
               </p>
-              <p className="text-[11px] text-white/30 mt-1">{s.message_count} berichten</p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-[11px] text-white/30">{s.message_count} berichten</span>
+                {s.email && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(0,212,170,0.15)] text-[#00D4AA]">
+                    {s.email}
+                  </span>
+                )}
+              </div>
             </a>
           ))}
         </div>
@@ -100,11 +111,28 @@ export default async function ChatsPage({
             </div>
           ) : (
             <>
-              <div className="px-5 py-4 border-b border-white/10">
+              <div className="px-5 py-4 border-b border-white/10 space-y-2">
                 <p className="text-sm font-semibold text-white">{activeData.first_message}</p>
-                <p className="text-xs text-white/35 mt-0.5">
+                <p className="text-xs text-white/35">
                   {activeData.site} · gestart {fmt(activeData.started_at)} · {activeData.message_count} berichten
                 </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/40">
+                  {activeData.email && (
+                    <span>
+                      <span className="text-[#00D4AA]">E-mail:</span>{" "}
+                      <a href={`mailto:${activeData.email}`} className="text-white/70 hover:text-white">{activeData.email}</a>
+                    </span>
+                  )}
+                  {activeData.ip_address && (
+                    <span><span className="text-white/50">IP:</span> {activeData.ip_address}</span>
+                  )}
+                  {activeData.page_url && (
+                    <span><span className="text-white/50">Pagina:</span> {activeData.page_url.replace(/^https?:\/\//, "")}</span>
+                  )}
+                  {activeData.referrer && (
+                    <span><span className="text-white/50">Via:</span> {activeData.referrer.replace(/^https?:\/\//, "")}</span>
+                  )}
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-3">
                 {messages.map((m) => (

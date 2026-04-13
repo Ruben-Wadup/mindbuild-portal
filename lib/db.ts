@@ -92,4 +92,10 @@ export async function runMigrations() {
   `;
 
   await sql`CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id)`;
+
+  // Chat lead data columns
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS ip_address TEXT`;
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS email TEXT`;
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS page_url TEXT`;
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS referrer TEXT`;
 }
