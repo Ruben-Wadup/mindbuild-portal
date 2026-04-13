@@ -93,6 +93,14 @@ export async function runMigrations() {
 
   await sql`CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id)`;
 
+  // UTM tracking columns on leads
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_source TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_medium TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_campaign TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_content TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_term TEXT`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS gclid TEXT`;
+
   // Chat lead data columns
   await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS ip_address TEXT`;
   await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS email TEXT`;

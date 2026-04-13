@@ -8,21 +8,27 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email, url, score, enrichment, source } = await req.json();
+    const { email, url, score, enrichment, source, utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "email is verplicht" }, { status: 400 });
     }
 
     const [lead] = await sql`
-      INSERT INTO leads (email, url, score, source, status, enrichment)
+      INSERT INTO leads (email, url, score, source, status, enrichment, utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid)
       VALUES (
         ${email},
         ${url ?? null},
         ${score ?? null},
         ${source ?? 'geo_scan'},
         'new',
-        ${enrichment ? JSON.stringify(enrichment) : null}
+        ${enrichment ? JSON.stringify(enrichment) : null},
+        ${utm_source ?? null},
+        ${utm_medium ?? null},
+        ${utm_campaign ?? null},
+        ${utm_content ?? null},
+        ${utm_term ?? null},
+        ${gclid ?? null}
       )
       RETURNING id
     `;

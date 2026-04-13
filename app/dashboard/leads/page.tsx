@@ -26,10 +26,17 @@ const sourceLabels: Record<string, string> = {
   contact_form: "Contactform",
 };
 
+function channelLabel(lead: Record<string, unknown>): string {
+  if (lead.gclid) return "Google Ads";
+  if (lead.utm_source === "google" && lead.utm_medium === "cpc") return "Google Ads";
+  if (lead.utm_source) return String(lead.utm_source);
+  return "Direct";
+}
+
 async function getLeads() {
   try {
     return await sql`
-      SELECT id, email, naam, bedrijf, url, score, source, status, onderwerp, created_at
+      SELECT id, email, naam, bedrijf, url, score, source, status, onderwerp, created_at, utm_source, utm_medium, utm_campaign, gclid
       FROM leads
       ORDER BY created_at DESC
     `;
@@ -72,6 +79,7 @@ export default async function LeadsPage() {
                     <th className="text-left text-xs text-white/40 font-medium px-4 py-3">URL / Bedrijf</th>
                     <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Score</th>
                     <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Bron</th>
+                    <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Kanaal</th>
                     <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Status</th>
                     <th className="text-left text-xs text-white/40 font-medium px-4 py-3">Datum</th>
                   </tr>
@@ -100,6 +108,14 @@ export default async function LeadsPage() {
                         <span className="text-xs text-white/50">
                           {sourceLabels[lead.source] ?? lead.source}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs text-white/50">
+                          {channelLabel(lead)}
+                        </span>
+                        {lead.utm_campaign && (
+                          <p className="text-[10px] text-white/25">{lead.utm_campaign}</p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Badge className={`text-xs border ${statusColors[lead.status] ?? "bg-white/10 text-white/40"}`}>
