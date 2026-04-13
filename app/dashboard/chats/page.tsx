@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import sql from "@/lib/db";
 import { MessageCircle } from "lucide-react";
+import { DeleteChatButton } from "./delete-button";
 
 type Session = {
   id: string;
@@ -112,7 +113,10 @@ export default async function ChatsPage({
           ) : (
             <>
               <div className="px-5 py-4 border-b border-white/10 space-y-2">
-                <p className="text-sm font-semibold text-white">{activeData.first_message}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-white">{activeData.first_message}</p>
+                  <DeleteChatButton sessionId={activeData.session_id} />
+                </div>
                 <p className="text-xs text-white/35">
                   {activeData.site} · gestart {fmt(activeData.started_at)} · {activeData.message_count} berichten
                 </p>
