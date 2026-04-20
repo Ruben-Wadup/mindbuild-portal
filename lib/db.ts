@@ -93,6 +93,8 @@ export async function runMigrations() {
 
   await sql`CREATE INDEX IF NOT EXISTS chat_messages_session_idx ON chat_messages(session_id)`;
 
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS whatsapp_optin BOOLEAN DEFAULT FALSE`;
+
   // UTM tracking columns on leads
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_source TEXT`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS utm_medium TEXT`;
