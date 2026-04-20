@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { slug, title, site, cover_image, category, primary_keyword, url } = await req.json();
+    const { slug, title, site, cover_image, category, primary_keyword, url, content_item_id } = await req.json();
 
     if (!slug || !title || !site) {
       return NextResponse.json({ error: "slug, title en site zijn verplicht" }, { status: 400 });
@@ -27,6 +27,15 @@ export async function POST(req: NextRequest) {
       )
       RETURNING id, slug, title, site, published_at
     `;
+
+    // If this blog came from a content planning item, mark it published
+    if (content_item_id) {
+      await sql`
+        UPDATE content_items
+        SET status = 'gepubliceerd', updated_at = NOW()
+        WHERE id = ${content_item_id}
+      `;
+    }
 
     return NextResponse.json({ ok: true, post });
   } catch (err) {
