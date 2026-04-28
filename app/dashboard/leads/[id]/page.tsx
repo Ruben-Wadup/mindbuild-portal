@@ -10,6 +10,7 @@ import { LeadNotes } from "./lead-notes";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { LeadStageEditor } from "./lead-stage-editor";
 import { LeadEnrichment } from "./lead-enrichment";
+import { WhatsappButton } from "./whatsapp-button";
 
 const statusLabels: Record<string, string> = {
   new: "Nieuw",
@@ -138,6 +139,9 @@ export default async function LeadDetailPage({
           initialDealValue={lead.deal_value ?? null}
         />
       </div>
+
+      {/* WhatsApp action — only show when there's a URL to scrape */}
+      {lead.url && <WhatsappButton leadId={lead.id} />}
 
       {/* Notes */}
       <LeadNotes leadId={lead.id} initialNotes={lead.notes ?? null} />
