@@ -205,8 +205,22 @@ export async function POST(
   homeData.scraped_at = new Date().toISOString();
   homeData.scraped_pages = pagesScraped;
 
-  // Merge with existing enrichment, new scrape wins for non-empty fields
-  const existing = (lead.enrichment ?? {}) as Record<string, unknown>;
+  // Merge with existing enrichment, new scrape wins for non-empty fields.
+  // Defensive: existing might be a JSON-encoded string from an earlier
+  // serialization bug, or any corrupt value. Parse / coerce to plain object.
+  let existing: Record<string, unknown> = {};
+  if (typeof lead.enrichment === "string") {
+    try {
+      const parsed = JSON.parse(lead.enrichment);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        existing = parsed as Record<string, unknown>;
+      }
+    } catch {
+      existing = {};
+    }
+  } else if (lead.enrichment && typeof lead.enrichment === "object" && !Array.isArray(lead.enrichment)) {
+    existing = lead.enrichment as Record<string, unknown>;
+  }
   const merged: Record<string, unknown> = { ...existing };
   for (const [k, v] of Object.entries(homeData)) {
     if (v !== undefined && v !== null && (typeof v !== "string" || v.length > 0)) {

@@ -21,74 +21,88 @@ interface Enrichment {
   scraped_at?: string;
 }
 
-export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | null }) {
-  if (!enrichment || Object.keys(enrichment).length === 0) return null;
+export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | string | null }) {
+  // Defensive: enrichment can be a string if DB stored a JSON-encoded string
+  // (from an earlier serialization bug). Try to parse, otherwise bail out.
+  let data: Enrichment | null = null;
+  if (typeof enrichment === "string") {
+    try {
+      const parsed = JSON.parse(enrichment);
+      data = (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : null;
+    } catch {
+      data = null;
+    }
+  } else if (enrichment && typeof enrichment === "object" && !Array.isArray(enrichment)) {
+    data = enrichment;
+  }
+  if (!data || Object.keys(data).length === 0) return null;
+  const enr: Enrichment = data;
 
   const contactItems = [
-    enrichment.phone && {
+    enr.phone && {
       icon: <Phone className="w-4 h-4" />, label: "Telefoon",
-      value: enrichment.phone,
-      href: `tel:${enrichment.phone.replace(/\s/g, "")}`,
+      value: enr.phone,
+      href: `tel:${enr.phone.replace(/\s/g, "")}`,
     },
-    enrichment.whatsapp && {
+    enr.whatsapp && {
       icon: <MessageCircle className="w-4 h-4" />, label: "WhatsApp",
-      value: `+${enrichment.whatsapp}`,
-      href: `https://wa.me/${enrichment.whatsapp}`,
+      value: `+${enr.whatsapp}`,
+      href: `https://wa.me/${enr.whatsapp}`,
     },
-    enrichment.email && {
+    enr.email && {
       icon: <Mail className="w-4 h-4" />, label: "E-mail",
-      value: enrichment.email,
-      href: `mailto:${enrichment.email}`,
+      value: enr.email,
+      href: `mailto:${enr.email}`,
     },
-    enrichment.address && {
+    enr.address && {
       icon: <MapPin className="w-4 h-4" />, label: "Adres",
-      value: enrichment.address,
-      href: `https://www.google.com/maps/search/${encodeURIComponent(enrichment.address)}`,
+      value: enr.address,
+      href: `https://www.google.com/maps/search/${encodeURIComponent(enr.address)}`,
     },
   ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href: string }[];
 
   const socialItems = [
-    enrichment.linkedin_company && {
+    enr.linkedin_company && {
       icon: <Briefcase className="w-4 h-4" />, label: "LinkedIn (bedrijf)",
-      value: enrichment.linkedin_company.replace(/^https?:\/\/(www\.|nl\.)?linkedin\.com\//, ""),
-      href: enrichment.linkedin_company,
+      value: enr.linkedin_company.replace(/^https?:\/\/(www\.|nl\.)?linkedin\.com\//, ""),
+      href: enr.linkedin_company,
     },
-    enrichment.linkedin_personal && {
+    enr.linkedin_personal && {
       icon: <Link2 className="w-4 h-4" />, label: "LinkedIn (persoon)",
-      value: enrichment.linkedin_personal.replace(/^https?:\/\/(www\.|nl\.)?linkedin\.com\//, ""),
-      href: enrichment.linkedin_personal,
+      value: enr.linkedin_personal.replace(/^https?:\/\/(www\.|nl\.)?linkedin\.com\//, ""),
+      href: enr.linkedin_personal,
     },
-    enrichment.instagram && {
+    enr.instagram && {
       icon: <Camera className="w-4 h-4" />, label: "Instagram",
-      value: enrichment.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@"),
-      href: enrichment.instagram,
+      value: enr.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@"),
+      href: enr.instagram,
     },
-    enrichment.facebook && {
+    enr.facebook && {
       icon: <Globe className="w-4 h-4" />, label: "Facebook",
-      value: enrichment.facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, ""),
-      href: enrichment.facebook,
+      value: enr.facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, ""),
+      href: enr.facebook,
     },
-    enrichment.twitter && {
+    enr.twitter && {
       icon: <MessageCircle className="w-4 h-4" />, label: "X / Twitter",
-      value: enrichment.twitter.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "@"),
-      href: enrichment.twitter,
+      value: enr.twitter.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "@"),
+      href: enr.twitter,
     },
-    enrichment.youtube && {
+    enr.youtube && {
       icon: <Video className="w-4 h-4" />, label: "YouTube",
-      value: enrichment.youtube.replace(/^https?:\/\/(www\.)?youtube\.com\//, ""),
-      href: enrichment.youtube,
+      value: enr.youtube.replace(/^https?:\/\/(www\.)?youtube\.com\//, ""),
+      href: enr.youtube,
     },
-    enrichment.tiktok && {
+    enr.tiktok && {
       icon: <Music className="w-4 h-4" />, label: "TikTok",
-      value: enrichment.tiktok.replace(/^https?:\/\/(www\.)?tiktok\.com\//, ""),
-      href: enrichment.tiktok,
+      value: enr.tiktok.replace(/^https?:\/\/(www\.)?tiktok\.com\//, ""),
+      href: enr.tiktok,
     },
   ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href: string }[];
 
-  const hasIdentity = enrichment.business_name || enrichment.tagline || enrichment.description;
+  const hasIdentity = enr.business_name || enr.tagline || enr.description;
   const hasContact = contactItems.length > 0;
   const hasSocial = socialItems.length > 0;
-  const hasIndustry = enrichment.industry_hints && enrichment.industry_hints.length > 0;
+  const hasIndustry = enr.industry_hints && enr.industry_hints.length > 0;
 
   if (!hasIdentity && !hasContact && !hasSocial && !hasIndustry) return null;
 
@@ -97,9 +111,9 @@ export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | null }
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-sm font-semibold text-white">Bedrijfsinformatie</CardTitle>
-          {enrichment.scraped_at && (
+          {enr.scraped_at && (
             <span className="text-[10px] text-white/30 font-mono">
-              {new Date(enrichment.scraped_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+              {new Date(enr.scraped_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
             </span>
           )}
         </div>
@@ -108,14 +122,14 @@ export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | null }
         {/* Identity */}
         {hasIdentity && (
           <div className="space-y-1.5">
-            {enrichment.business_name && (
-              <p className="text-base font-bold text-white">{enrichment.business_name}</p>
+            {enr.business_name && (
+              <p className="text-base font-bold text-white">{enr.business_name}</p>
             )}
-            {enrichment.tagline && (
-              <p className="text-sm text-white/70 italic">{enrichment.tagline}</p>
+            {enr.tagline && (
+              <p className="text-sm text-white/70 italic">{enr.tagline}</p>
             )}
-            {enrichment.description && (
-              <p className="text-xs text-white/50 leading-relaxed">{enrichment.description}</p>
+            {enr.description && (
+              <p className="text-xs text-white/50 leading-relaxed">{enr.description}</p>
             )}
           </div>
         )}
@@ -123,7 +137,7 @@ export function LeadEnrichment({ enrichment }: { enrichment: Enrichment | null }
         {/* Industry hints */}
         {hasIndustry && (
           <div className="flex flex-wrap gap-1.5">
-            {enrichment.industry_hints!.map((tag) => (
+            {enr.industry_hints!.map((tag) => (
               <span
                 key={tag}
                 className="text-[10px] px-2 py-0.5 rounded-full bg-[#00D4AA]/10 border border-[#00D4AA]/20 text-[#00D4AA]/80 font-mono"
