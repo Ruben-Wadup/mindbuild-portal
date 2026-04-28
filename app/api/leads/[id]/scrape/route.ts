@@ -217,7 +217,7 @@ export async function POST(
   try {
     await sql`
       UPDATE leads
-      SET enrichment = ${JSON.stringify(merged)}::jsonb,
+      SET enrichment = ${JSON.stringify(merged)},
           updated_at = NOW()
       WHERE id = ${id}
     `;

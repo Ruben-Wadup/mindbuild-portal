@@ -77,7 +77,7 @@ export default async function LeadDetailPage({
   if (!lead) notFound();
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-6 space-y-6 max-w-7xl">
       {/* Back */}
       <Link
         href="/dashboard/leads"
@@ -100,6 +100,10 @@ export default async function LeadDetailPage({
           <DeleteLeadButton leadId={lead.id} />
         </div>
       </div>
+
+      {/* Two-column layout on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 items-start">
+      <div className="space-y-6 min-w-0">
 
       {/* Lead info */}
       <Card className="bg-white/5 border-white/10">
@@ -152,26 +156,28 @@ export default async function LeadDetailPage({
         </CardContent>
       </Card>
 
-      {/* Enrichment + Stage side-by-side on wider screens */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <LeadEnrichment enrichment={lead.enrichment ?? null} />
-        <LeadStageEditor
-          leadId={lead.id}
-          initialStage={lead.stage ?? "prospect"}
-          initialDealValue={lead.deal_value ?? null}
-        />
-      </div>
-
-      {/* Actions — only show when there's a URL */}
-      {lead.url && (
-        <div className="space-y-3">
-          <ScrapeButton leadId={lead.id} />
-          <WhatsappButton leadId={lead.id} />
-        </div>
-      )}
+      {/* Stage editor */}
+      <LeadStageEditor
+        leadId={lead.id}
+        initialStage={lead.stage ?? "prospect"}
+        initialDealValue={lead.deal_value ?? null}
+      />
 
       {/* Notes */}
       <LeadNotes leadId={lead.id} initialNotes={lead.notes ?? null} />
+
+      </div>{/* end left column */}
+
+      {/* Right column — enrichment + actions + timeline */}
+      <div className="space-y-6 min-w-0">
+        <LeadEnrichment enrichment={lead.enrichment ?? null} />
+
+        {lead.url && (
+          <div className="space-y-3">
+            <ScrapeButton leadId={lead.id} />
+            <WhatsappButton leadId={lead.id} />
+          </div>
+        )}
 
       {/* n8n timeline (only for geo_scan leads) */}
       {lead.source === "geo_scan" && (() => {
@@ -230,6 +236,9 @@ export default async function LeadDetailPage({
           </Card>
         );
       })()}
+
+      </div>{/* end right column */}
+      </div>{/* end grid */}
     </div>
   );
 }
