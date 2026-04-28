@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import sql from "@/lib/db";
+import { getSession } from "@/lib/auth";
 
 type LeadRow = {
   id: string;
@@ -154,6 +156,10 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await getSession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const [lead] = await sql<LeadRow[]>`
@@ -208,12 +214,29 @@ export async function POST(
     }
   }
 
-  await sql`
-    UPDATE leads
-    SET enrichment = ${JSON.stringify(merged)},
-        updated_at = NOW()
-    WHERE id = ${id}
-  `;
+  try {
+    await sql`
+      UPDATE leads
+      SET enrichment = ${JSON.stringify(merged)}::jsonb,
+          updated_at = NOW()
+      WHERE id = ${id}
+    `;
+  } catch (err) {
+    console.error("[scrape] DB update failed:", err);
+    return NextResponse.json({
+      ok: false,
+      error: "Opslaan mislukt: " + (err instanceof Error ? err.message : String(err)),
+      data: homeData,
+    }, { status: 500 });
+  }
 
-  return NextResponse.json({ ok: true, data: homeData, pagesScraped });
+  // Invalidate the lead detail page cache so the next render shows fresh data
+  revalidatePath(`/dashboard/leads/${id}`);
+
+  return NextResponse.json({
+    ok: true,
+    data: homeData,
+    pagesScraped,
+    fieldsFound: Object.keys(homeData).filter((k) => k !== "scraped_at" && k !== "scraped_pages").length,
+  });
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
 type Result =
-  | { ok: true; data: Record<string, unknown>; pagesScraped: string[] }
+  | { ok: true; data: Record<string, unknown>; pagesScraped: string[]; fieldsFound: number }
   | { ok: false; error: string };
 
 export function ScrapeButton({ leadId }: { leadId: string }) {
@@ -20,7 +20,12 @@ export function ScrapeButton({ leadId }: { leadId: string }) {
       const res = await fetch(`/api/leads/${leadId}/scrape`, { method: "POST" });
       const data = await res.json();
       setResult(data);
-      if (data.ok) router.refresh();
+      if (data.ok) {
+        router.refresh();
+        // Belt-and-braces: also do a hard reload after a short pause so user
+        // definitely sees the updated Bedrijfsinformatie card
+        setTimeout(() => window.location.reload(), 1500);
+      }
     } catch {
       setResult({ ok: false, error: "Verzoek mislukt." });
     } finally {
@@ -58,10 +63,10 @@ export function ScrapeButton({ leadId }: { leadId: string }) {
         <div className="rounded-lg bg-[#00D4AA]/10 border border-[#00D4AA]/30 p-3 space-y-2">
           <p className="text-xs text-[#00D4AA] font-semibold flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Scrape voltooid — gegevens opgeslagen ({result.pagesScraped.length} pagina&#39;s)
+            Scrape voltooid — {result.fieldsFound} velden gevonden op {result.pagesScraped.length} pagina&#39;s
           </p>
           <p className="text-[11px] text-white/40">
-            De Bedrijfsinformatie sectie hierboven is bijgewerkt met de nieuwe data.
+            Pagina wordt herladen met de nieuwe data…
           </p>
         </div>
       )}
