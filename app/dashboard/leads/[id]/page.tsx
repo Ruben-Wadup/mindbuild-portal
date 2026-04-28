@@ -11,6 +11,7 @@ import { DeleteLeadButton } from "./delete-lead-button";
 import { LeadStageEditor } from "./lead-stage-editor";
 import { LeadEnrichment } from "./lead-enrichment";
 import { WhatsappButton } from "./whatsapp-button";
+import { ScrapeButton } from "./scrape-button";
 
 const statusLabels: Record<string, string> = {
   new: "Nieuw",
@@ -28,13 +29,15 @@ const statusColors: Record<string, string> = {
   lost: "bg-red-500/20 text-red-400 border-red-500/20",
 };
 
-const TIMELINE_STEPS = [
-  { key: "new", label: "Scan rapport verstuurd", description: "Initieel rapport via Resend" },
-  { key: "day3_sent", label: "Dag 3 follow-up", description: "Follow-up e-mail verzonden" },
-  { key: "day7_sent", label: "Dag 7 follow-up", description: "Afsluitende e-mail verzonden" },
-];
+type TimelineStep = {
+  key: string;
+  label: string;
+  description: string;
+  optional?: boolean;
+  optInRequired?: boolean;
+};
 
-const STATUS_ORDER = ["new", "day3_sent", "day7_sent", "converted", "lost"];
+const STATUS_ORDER = ["new", "wa_sent", "day3_sent", "day7_sent", "converted", "lost"];
 
 function getStepState(stepKey: string, currentStatus: string) {
   const stepIdx = STATUS_ORDER.indexOf(stepKey);
@@ -42,6 +45,25 @@ function getStepState(stepKey: string, currentStatus: string) {
   if (currentIdx > stepIdx) return "done";
   if (currentIdx === stepIdx) return "active";
   return "pending";
+}
+
+function buildTimeline(whatsappOptin: boolean): TimelineStep[] {
+  const steps: TimelineStep[] = [
+    { key: "new", label: "Scan rapport verstuurd", description: "Initieel rapport per e-mail (Resend)" },
+  ];
+  if (whatsappOptin) {
+    steps.push({
+      key: "wa_sent",
+      label: "Dag 2 WhatsApp",
+      description: "Click-to-chat push naar Ruben — alleen bij opt-in",
+      optInRequired: true,
+    });
+  }
+  steps.push(
+    { key: "day3_sent", label: "Dag 3 follow-up", description: "Follow-up e-mail" },
+    { key: "day7_sent", label: "Dag 7 follow-up", description: "Afsluitende e-mail" },
+  );
+  return steps;
 }
 
 export default async function LeadDetailPage({
@@ -140,62 +162,74 @@ export default async function LeadDetailPage({
         />
       </div>
 
-      {/* WhatsApp action — only show when there's a URL to scrape */}
-      {lead.url && <WhatsappButton leadId={lead.id} />}
+      {/* Actions — only show when there's a URL */}
+      {lead.url && (
+        <div className="space-y-3">
+          <ScrapeButton leadId={lead.id} />
+          <WhatsappButton leadId={lead.id} />
+        </div>
+      )}
 
       {/* Notes */}
       <LeadNotes leadId={lead.id} initialNotes={lead.notes ?? null} />
 
       {/* n8n timeline (only for geo_scan leads) */}
-      {lead.source === "geo_scan" && (
-        <Card className="bg-white/5 border-white/10">
-          <CardHeader>
-            <CardTitle className="text-sm font-semibold text-white">n8n Follow-up status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative space-y-0">
-              {TIMELINE_STEPS.map((step, i) => {
-                const state = getStepState(step.key, lead.status);
-                return (
-                  <div key={step.key} className="flex items-start gap-4">
-                    {/* Icon + line */}
-                    <div className="flex flex-col items-center">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        state === "done" ? "bg-[#00D4AA]/20" :
-                        state === "active" ? "bg-blue-500/20" :
-                        "bg-white/5"
-                      }`}>
-                        {state === "done" ? (
-                          <CheckCircle2 className="w-4 h-4 text-[#00D4AA]" />
-                        ) : state === "active" ? (
-                          <Clock className="w-4 h-4 text-blue-400" />
-                        ) : (
-                          <Circle className="w-4 h-4 text-white/20" />
+      {lead.source === "geo_scan" && (() => {
+        const timelineSteps = buildTimeline(!!lead.whatsapp_optin);
+        return (
+          <Card className="bg-white/5 border-white/10">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+                n8n Follow-up status
+                {lead.whatsapp_optin && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#25D366]/15 text-[#25D366] border border-[#25D366]/30">
+                    WA opt-in
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="relative space-y-0">
+                {timelineSteps.map((step, i) => {
+                  const state = getStepState(step.key, lead.status);
+                  return (
+                    <div key={step.key} className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          state === "done" ? "bg-[#00D4AA]/20" :
+                          state === "active" ? "bg-blue-500/20" :
+                          "bg-white/5"
+                        }`}>
+                          {state === "done" ? (
+                            <CheckCircle2 className="w-4 h-4 text-[#00D4AA]" />
+                          ) : state === "active" ? (
+                            <Clock className="w-4 h-4 text-blue-400" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-white/20" />
+                          )}
+                        </div>
+                        {i < timelineSteps.length - 1 && (
+                          <div className={`w-px h-8 mt-1 ${state === "done" ? "bg-[#00D4AA]/30" : "bg-white/10"}`} />
                         )}
                       </div>
-                      {i < TIMELINE_STEPS.length - 1 && (
-                        <div className={`w-px h-8 mt-1 ${state === "done" ? "bg-[#00D4AA]/30" : "bg-white/10"}`} />
-                      )}
+                      <div className="pb-6">
+                        <p className={`text-sm font-medium ${
+                          state === "done" ? "text-white" :
+                          state === "active" ? "text-blue-300" :
+                          "text-white/30"
+                        }`}>
+                          {step.label}
+                        </p>
+                        <p className="text-xs text-white/30 mt-0.5">{step.description}</p>
+                      </div>
                     </div>
-
-                    {/* Content */}
-                    <div className="pb-6">
-                      <p className={`text-sm font-medium ${
-                        state === "done" ? "text-white" :
-                        state === "active" ? "text-blue-300" :
-                        "text-white/30"
-                      }`}>
-                        {step.label}
-                      </p>
-                      <p className="text-xs text-white/30 mt-0.5">{step.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
